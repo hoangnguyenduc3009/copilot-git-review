@@ -1,58 +1,66 @@
 {
-  "name": "mcp-git-diff-vscode",
-  "displayName": "MCP Git Diff for Copilot (local)",
-  "publisher": "Harrus",
+  "name": "mcp-get-git-diff",
+  "displayName": "MCP: Get Git Diff",
+  "description": "Send git diff (current vs main) to Copilot Chat with one click",
   "version": "0.0.1",
-  "activationEvents": [
-    "onCommand:mcp.getGitDiff",
-    "onCommand:mcp.getGitDiffCurrentFile"
-  ],
+  "publisher": "harrus",
+  "repository": "https://github.com/hoangnguyenduc3009/copilot-git-review",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other", "SCM"],
+  "icon": "images/icon.png",
+  "activationEvents": ["onCommand:mcp.getGitDiff"],
   "main": "./out/extension.js",
+
   "contributes": {
     "commands": [
       {
         "command": "mcp.getGitDiff",
-        "title": "MCP: Get Git Diff (repo vs main)"
-      },
-      {
-        "command": "mcp.getGitDiffCurrentFile",
-        "title": "MCP: Get Git Diff (current file vs main)"
+        "title": "MCP: Send Git Diff to Copilot Chat",
+        "icon": "$(git-branch)"
       }
     ],
-    "configuration": {
-      "type": "object",
-      "title": "MCP Git Diff",
-      "properties": {
-        "mcpGitDiff.baseBranch": {
-          "type": "string",
-          "default": "main",
-          "description": "Base branch to diff against. Will fallback to 'master' if branch not found."
-        },
-        "mcpGitDiff.copyToClipboard": {
-          "type": "boolean",
-          "default": true,
-          "description": "Copy diff result to clipboard after fetching (useful to paste into Copilot)."
-        },
-        "mcpGitDiff.maxChars": {
-          "type": "number",
-          "default": 200000,
-          "description": "Maximum number of characters to open/copy. Large diffs are truncated."
-        }
+    "keybindings": [
+      {
+        "command": "mcp.getGitDiff",
+        "key": "ctrl+alt+d",
+        "mac": "cmd+alt+d",
+        "when": "editorTextFocus && gitOpenRepositoryCount != 0"
       }
+    ],
+    "menus": {
+      "commandPalette": [
+        { "command": "mcp.getGitDiff" }
+      ],
+      "explorer/context": [
+        { "command": "mcp.getGitDiff", "group": "navigation" }
+      ],
+      "view/title": [
+        {
+          "command": "mcp.getGitDiff",
+          "when": "view == workbench.view.scm",
+          "group": "navigation"
+        }
+      ]
     }
   },
+
   "scripts": {
-    "compile": "tsc -p .",
-    "package": "vsce package --no-yarn",
-    "dev": "code --extensionDevelopmentPath=. "
+    "clean": "rimraf out *.vsix",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "build": "npm run clean && npm run compile && node scripts/generate-icon.js && vsce package",
+    "publish": "vsce publish",
+    "prebuild": "npm install",
+    "prepublishOnly": "npm run build"
   },
+
   "devDependencies": {
-    "@types/node": "^18.0.0",
-    "@types/vscode": "^1.80.0",
-    "typescript": "^5.1.0",
-    "vsce": "^1.97.0"
-  },
-  "engines": {
-    "vscode": "^1.80.0"
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^18.x",
+    "typescript": "^5.3.0",
+    "vsce": "^2.15.0",
+    "rimraf": "^5.0.0"
   }
 }
