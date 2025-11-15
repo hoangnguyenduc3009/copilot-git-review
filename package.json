@@ -1,0 +1,58 @@
+{
+  "name": "mcp-git-diff-vscode",
+  "displayName": "MCP Git Diff for Copilot (local)",
+  "publisher": "Harrus",
+  "version": "0.0.1",
+  "activationEvents": [
+    "onCommand:mcp.getGitDiff",
+    "onCommand:mcp.getGitDiffCurrentFile"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "mcp.getGitDiff",
+        "title": "MCP: Get Git Diff (repo vs main)"
+      },
+      {
+        "command": "mcp.getGitDiffCurrentFile",
+        "title": "MCP: Get Git Diff (current file vs main)"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "MCP Git Diff",
+      "properties": {
+        "mcpGitDiff.baseBranch": {
+          "type": "string",
+          "default": "main",
+          "description": "Base branch to diff against. Will fallback to 'master' if branch not found."
+        },
+        "mcpGitDiff.copyToClipboard": {
+          "type": "boolean",
+          "default": true,
+          "description": "Copy diff result to clipboard after fetching (useful to paste into Copilot)."
+        },
+        "mcpGitDiff.maxChars": {
+          "type": "number",
+          "default": 200000,
+          "description": "Maximum number of characters to open/copy. Large diffs are truncated."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p .",
+    "package": "vsce package --no-yarn",
+    "dev": "code --extensionDevelopmentPath=. "
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/vscode": "^1.80.0",
+    "typescript": "^5.1.0",
+    "vsce": "^1.97.0"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  }
+}
