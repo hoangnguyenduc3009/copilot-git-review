@@ -133,50 +133,35 @@ async function showDiffPreview(diff: string, current: string, main: string) {
 }
 
 async function sendToCopilotChat(diff: string, baseRef: string, currentBranch: string | null) {
-  // Try to use the experimental LM API if available. The API may not be
-  // present in the @types in this environment, so cast to any to avoid
-  // TypeScript errors while still attempting the direct send at runtime.
-  const lmApi: any = (vscode as any).lm;
-  if (lmApi && typeof lmApi.requestChatCompletion === 'function') {
-    try {
-      const userText = `Here is the git diff between my current branch (${currentBranch ?? 'unknown'}) and ${baseRef}:\n\n\`\`\`diff\n${diff}\n\`\`\`\n\nPlease review and suggest improvements.`;
-      const chatReq = lmApi.requestChatCompletion({
-        model: 'copilot',
-        messages: [
-          {
-            // ChatMessageRole may not exist on the declared types here; use the
-            // string role value to avoid a type reference. The runtime API
-            // accepts a role string like 'user'.
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: userText
-              }
-            ]
-          }
-        ]
-      });
-      await chatReq;
-      vscode.window.showInformationMessage('Git diff sent to Copilot Chat!');
-      return;
-    } catch (err: any) {
-      // fall through to fallback below
-      console.error('LM API send failed:', err);
-    }
+  const userText = `Here is the git diff between my current branch (${currentBranch ?? 'unknown'}) and ${baseRef}:\n\n\`\`\`diff\n${diff}\n\`\`\`\n\nPlease review and suggest improvements.`;
+
+  // Preferred: Open the built-in Chat UI with the query prefilled and sent.
+  try {
+    // This command is available in recent VS Code builds and will open the Chat view,
+    // focus the input, and (when a full query is provided) submit it.
+    await vscode.commands.executeCommand('workbench.action.chat.open', {
+      query: userText,
+      // If set, VS Code can wait until the response is complete before returning.
+      // We don't block here to keep UX snappy.
+      blockOnResponse: false
+    });
+    vscode.window.showInformationMessage('Opened Copilot Chat with your diff.');
+    return;
+  } catch (err) {
+    // Fall through to next strategy
+    console.error('Opening chat with query failed:', err);
   }
 
-  // Fallback: copy to clipboard and prompt user to paste into Copilot Chat.
-  await vscode.env.clipboard.writeText(diff);
-  vscode.window.showWarningMessage(
-    'Could not send directly. Diff copied to clipboard. Paste into Copilot Chat.'
-  );
-  // Try to focus the Copilot Chat pane if available.
+  // Fallback: focus the Copilot Chat view and copy the text for manual paste.
   try {
-    vscode.commands.executeCommand('workbench.panel.chat.view.copilot.focus');
-  } catch (e) {
+    await vscode.commands.executeCommand('workbench.panel.chat.view.copilot.focus');
+  } catch {
     // ignore
   }
+  await vscode.env.clipboard.writeText(userText);
+  vscode.window.showWarningMessage(
+    'Could not send directly. I opened Copilot Chat and copied the message to your clipboard — paste to send.'
+  );
 }
 
 export function deactivate() {}
