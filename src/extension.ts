@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import * as cp from 'child_process';
-import * as path from 'path';
 
 export function activate(context: vscode.ExtensionContext) {
   const disposable = vscode.commands.registerCommand('mcp.getGitDiff', async () => {
@@ -11,44 +10,51 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     try {
-      // 1. Lấy branch hiện tại
+  // 1. Get current branch
       const currentBranch = await getCurrentBranch(workspaceRoot);
       if (!currentBranch) {
         vscode.window.showWarningMessage('Not in a git repository.');
         return;
       }
 
-      // 2. Kiểm tra branch main/master
-      const mainBranch = await resolveMainBranch(workspaceRoot);
+  // 2. Determine the main branch: prefer configuration, otherwise ask the user on first run
+      const mainBranch = await getOrAskForMainBranch(workspaceRoot);
       if (!mainBranch) {
-        vscode.window.showWarningMessage('Could not find main or master branch.');
+        vscode.window.showWarningMessage('Could not determine a main branch.');
         return;
       }
 
-      // 3. Lấy diff
+  // 3. Get diff
       const diff = await getGitDiff(workspaceRoot, currentBranch, mainBranch);
       if (!diff) {
         vscode.window.showInformationMessage('No changes to diff.');
         return;
       }
 
-      // 4. Hỏi người dùng: xem trước hay gửi luôn?
+  // 4. Ask the user to enter ticket/requirement (optional)
+          const specInfo = await vscode.window.showInputBox({
+            prompt: 'Enter spec (optional)',
+            placeHolder: 'e.g., feature description or acceptance criteria',
+            ignoreFocusOut: true
+          });
+
+  // 5. Ask the user: preview first or send directly?
       const choice = await vscode.window.showQuickPick(
         ['Send to Copilot Chat', 'Preview Diff First', 'Cancel'],
         { placeHolder: 'What would you like to do with the diff?' }
       );
 
       if (choice === 'Send to Copilot Chat') {
-        await sendToCopilotChat(diff, mainBranch, currentBranch);
+            await sendToCopilotChat(diff, mainBranch, currentBranch, specInfo);
       } else if (choice === 'Preview Diff First') {
         await showDiffPreview(diff, currentBranch, mainBranch);
-        // Sau khi xem, hỏi gửi không
+  // After previewing, ask whether to send
         const sendAfter = await vscode.window.showInformationMessage(
           'Send this diff to Copilot Chat?',
           'Yes', 'No'
         );
         if (sendAfter === 'Yes') {
-          await sendToCopilotChat(diff, mainBranch, currentBranch);
+              await sendToCopilotChat(diff, mainBranch, currentBranch, specInfo);
         }
       }
     } catch (err: any) {
@@ -57,6 +63,22 @@ export function activate(context: vscode.ExtensionContext) {
   });
 
   context.subscriptions.push(disposable);
+
+  // Command: allow user to re-select the main branch any time
+  const selectMainBranchCmd = vscode.commands.registerCommand('mcp.selectMainBranch', async () => {
+    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (!workspaceRoot) {
+      vscode.window.showErrorMessage('No workspace folder open.');
+      return;
+    }
+    const picked = await promptSelectMainBranch(workspaceRoot);
+    if (picked) {
+      await saveMainBranch(picked);
+      vscode.window.showInformationMessage(`Main branch set to: ${picked}`);
+    }
+  });
+
+  context.subscriptions.push(selectMainBranchCmd);
 }
 
 function getCurrentBranch(root: string): Promise<string | null> {
@@ -108,9 +130,144 @@ async function resolveMainBranch(root: string): Promise<string | null> {
   return parsed;
 }
 
+async function listAllBranches(root: string): Promise<string[]> {
+  return new Promise((resolve) => {
+    const cmd = `git for-each-ref --format="%(refname:short)" refs/heads refs/remotes`;
+    cp.exec(cmd, { cwd: root, maxBuffer: 2 * 1024 * 1024 }, (err, stdout) => {
+      if (err || !stdout) return resolve([]);
+      const lines = stdout
+        .split(/\r?\n/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+        // Filter out HEAD pointers like 'origin/HEAD'
+        .filter((b) => !/\/HEAD$/.test(b));
+      // De-duplicate
+      const seen = new Set<string>();
+      const out: string[] = [];
+      for (const b of lines) {
+        if (!seen.has(b)) {
+          seen.add(b);
+          out.push(b);
+        }
+      }
+      resolve(out);
+    });
+  });
+}
+
+async function branchExists(root: string, branch: string): Promise<boolean> {
+  // If contains a slash, try as remote ref first (refs/remotes/<branch>)
+  const tries = [
+    `refs/heads/${branch}`,
+    `refs/remotes/${branch}`
+  ];
+  for (const ref of tries) {
+    // eslint-disable-next-line no-await-in-loop
+    const ok = await new Promise<boolean>((resolve) => {
+      cp.exec(`git show-ref --verify --quiet ${ref}`, { cwd: root }, (err) => resolve(!err));
+    });
+    if (ok) return true;
+  }
+  return false;
+}
+
+async function promptSelectMainBranch(root: string): Promise<string | null> {
+  const branches = await listAllBranches(root);
+  if (!branches.length) return null;
+
+  // Prefer showing likely main branches at top
+  const priority = (b: string) => (/(^|\/)main$/.test(b) ? 0 : /(^|\/)master$/.test(b) ? 1 : 2);
+  const sorted = branches.sort((a, b) => priority(a) - priority(b) || a.localeCompare(b));
+
+  const items: vscode.QuickPickItem[] = sorted.map((b) => ({ label: b }));
+  items.unshift({ label: '$(pencil) Enter branch manually…', description: 'Type another branch name' } as any);
+
+  const pick = await vscode.window.showQuickPick(items, {
+    placeHolder: 'Select the main/base branch (e.g., main, master, or origin/main)'
+  });
+  if (!pick) return null;
+
+  if (pick.label.includes('Enter branch')) {
+    const manual = await vscode.window.showInputBox({
+      prompt: 'Enter branch name to use as main/base (e.g., main, master, origin/main)',
+      placeHolder: 'main',
+      ignoreFocusOut: true
+    });
+    if (!manual) return null;
+    return manual.trim();
+  }
+  return pick.label.trim();
+}
+
+async function getOrAskForMainBranch(root: string): Promise<string | null> {
+  const config = vscode.workspace.getConfiguration('copilotGitReview');
+  let main = (config.get<string>('mainBranch') || '').trim();
+
+  if (!main) {
+    // First run: ask the user
+    const picked = await promptSelectMainBranch(root);
+    if (picked) {
+      await saveMainBranch(picked);
+      main = picked;
+    } else {
+      // As a fallback, try to resolve automatically
+      main = (await resolveMainBranch(root)) || '';
+    }
+  }
+
+  if (!main) return null;
+
+  // Validate branch exists; if not, offer to reselect
+  const exists = await branchExists(root, main);
+  if (!exists) {
+    const choice = await vscode.window.showWarningMessage(
+      `Configured main branch '${main}' was not found in this repository. Select another?`,
+      'Select',
+      'Cancel'
+    );
+    if (choice === 'Select') {
+      const picked = await promptSelectMainBranch(root);
+      if (picked) {
+        await saveMainBranch(picked);
+        return picked;
+      }
+    }
+    return null;
+  }
+  return main;
+}
+
+async function saveMainBranch(value: string): Promise<void> {
+  const config = vscode.workspace.getConfiguration('copilotGitReview');
+  await config.update('mainBranch', value, vscode.ConfigurationTarget.Global);
+}
+
 function getGitDiff(root: string, current: string, main: string): Promise<string | null> {
   return new Promise((resolve) => {
-    const cmd = `git diff ${main}...${current} --unified=3`;
+    // Exclude log files, lock files, and other unnecessary files
+    const excludePatterns = [
+      '*.log',
+      '*.lock',
+      'package-lock.json',
+      'yarn.lock',
+      'pnpm-lock.yaml',
+      'bun.lockb',
+      '*.min.js',
+      '*.min.css',
+      '*.map',
+      'dist/*',
+      'build/*',
+      'out/*',
+      '.vscode/*',
+      '.idea/*',
+      'node_modules/*',
+      '*.tmp',
+      '*.temp',
+      '*.cache'
+    ];
+    
+    const excludeArgs = excludePatterns.map(p => `':(exclude)${p}'`).join(' ');
+    const cmd = `git diff ${main}...${current} --unified=3 -- . ${excludeArgs}`;
     cp.exec(cmd, { cwd: root, maxBuffer: 10 * 1024 * 1024 }, (err, stdout) => {
       if (err || !stdout.trim()) resolve(null);
       else resolve(stdout);
@@ -132,8 +289,14 @@ async function showDiffPreview(diff: string, current: string, main: string) {
   );
 }
 
-async function sendToCopilotChat(diff: string, baseRef: string, currentBranch: string | null) {
-  const userText = `Here is the git diff between my current branch (${currentBranch ?? 'unknown'}) and ${baseRef}:\n\n\`\`\`diff\n${diff}\n\`\`\`\n\nPlease review and suggest improvements.`;
+async function sendToCopilotChat(diff: string, baseRef: string, currentBranch: string | null, specInfo?: string) {
+  let userText = `Here is the git diff between my current branch (${currentBranch ?? 'unknown'}) and ${baseRef}:`;
+
+  if (specInfo && specInfo.trim()) {
+    userText += `\n\n**Spec:** ${specInfo.trim()}`;
+  }
+
+  userText += `\n\n\`\`\`diff\n${diff}\n\`\`\`\n\nPlease review and suggest improvements.`;
 
   // Preferred: Open the built-in Chat UI with the query prefilled and sent.
   try {

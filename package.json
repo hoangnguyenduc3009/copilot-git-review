@@ -1,40 +1,65 @@
 {
   "name": "mcp-get-git-diff",
-  "displayName": "MCP: Get Git Diff",
-  "description": "Send git diff (current vs main) to Copilot Chat with one click",
+  "displayName": "Copilot Git Review",
+  "description": "Review your code changes with Copilot in one click.",
   "version": "0.0.1",
   "publisher": "harrus",
   "repository": "https://github.com/hoangnguyenduc3009/copilot-git-review",
+  "readme": "DETAILS.md",
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": ["Other", "SCM"],
-  "icon": "images/icon.png",
-  "activationEvents": ["onCommand:mcp.getGitDiff"],
+  "categories": [
+    "SCM",
+    "SCM Providers",
+    "Source Control",
+    "Other",
+    "Machine Learning",
+    "AI",
+    "Chat",
+    "Programming Languages"
+  ],
+  "icon": "icon.png",
+  "activationEvents": [
+    "onCommand:mcp.getGitDiff",
+    "onCommand:mcp.selectMainBranch"
+  ],
   "main": "./out/extension.js",
-
   "contributes": {
     "commands": [
       {
         "command": "mcp.getGitDiff",
         "title": "MCP: Send Git Diff to Copilot Chat",
         "icon": "$(git-branch)"
+      },
+      {
+        "command": "mcp.selectMainBranch",
+        "title": "MCP: Select Main Branch",
+        "icon": "$(repo-pull)"
       }
     ],
     "keybindings": [
       {
         "command": "mcp.getGitDiff",
         "key": "ctrl+alt+d",
-        "mac": "cmd+alt+d",
+        "mac": "cmd+shift+d",
         "when": "editorTextFocus && gitOpenRepositoryCount != 0"
       }
     ],
     "menus": {
       "commandPalette": [
-        { "command": "mcp.getGitDiff" }
+        {
+          "command": "mcp.getGitDiff"
+        },
+        {
+          "command": "mcp.selectMainBranch"
+        }
       ],
       "explorer/context": [
-        { "command": "mcp.getGitDiff", "group": "navigation" }
+        {
+          "command": "mcp.getGitDiff",
+          "group": "navigation"
+        }
       ],
       "view/title": [
         {
@@ -43,24 +68,34 @@
           "group": "navigation"
         }
       ]
+    },
+    "configuration": {
+      "title": "Copilot Git Review",
+      "properties": {
+        "copilotGitReview.mainBranch": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Main/base branch to diff against (e.g., 'main', 'master', or 'origin/main'). Leave empty to be prompted the first time.",
+          "scope": "application"
+        }
+      }
     }
   },
-
   "scripts": {
     "clean": "rimraf out *.vsix",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "build": "npm run clean && npm run compile && node scripts/generate-icon.js && vsce package",
+    "build": "npm run clean && npm run compile && vsce package",
     "publish": "vsce publish",
     "prebuild": "npm install",
     "prepublishOnly": "npm run build"
   },
-
   "devDependencies": {
-    "@types/vscode": "^1.85.0",
     "@types/node": "^18.x",
+    "@types/vscode": "^1.85.0",
+    "canvas": "^3.2.0",
+    "rimraf": "^5.0.0",
     "typescript": "^5.3.0",
-    "vsce": "^2.15.0",
-    "rimraf": "^5.0.0"
+    "vsce": "^2.15.0"
   }
 }
