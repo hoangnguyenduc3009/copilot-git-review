@@ -1,8 +1,8 @@
 {
-  "name": "mcp-get-git-diff",
+  "name": "copilot-git-review",
   "displayName": "Copilot Git Review",
   "description": "Review your code changes with Copilot in one click.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "harrus",
   "repository": "https://github.com/hoangnguyenduc3009/copilot-git-review",
   "readme": "DETAILS.md",
@@ -10,9 +10,7 @@
     "vscode": "^1.85.0"
   },
   "categories": [
-    "SCM",
     "SCM Providers",
-    "Source Control",
     "Other",
     "Machine Learning",
     "AI",

@@ -1,13 +1,13 @@
 # Copilot Git Review
 
-[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/harrus.mcp-get-git-diff.svg)](https://marketplace.visualstudio.com/items?itemName=harrus.mcp-get-git-diff)
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/harrus.copilot-git-review.svg)](https://marketplace.visualstudio.com/items?itemName=harrus.copilot-git-review)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A VS Code extension that helps developers quickly send their git diff to Copilot Chat for code review and suggestions.
 
 ## Quick Start
 
-1. **Install** the extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=harrus.mcp-get-git-diff)
+1. **Install** the extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=harrus.copilot-git-review)
 2. **Open** a git repository in VS Code with local changes
 3. **Press** `Cmd+Shift+D` (macOS) or `Ctrl+Alt+D` (Windows/Linux) to send your diff to Copilot Chat
 4. **Review** suggestions from Copilot Chat

@@ -1,7 +1,7 @@
 ```markdown
 # Copilot Git Review — Details
 
-![Copilot Git Review Demo](./demo.gif)
+![Copilot Git Review Demo](https://raw.githubusercontent.com/hoangnguyenduc3009/copilot-git-review/main/demo.gif)
 
 This document provides detailed information about the Copilot Git Review VS Code extension: its purpose, how it works, available commands, configuration options, troubleshooting tips, and privacy notes.
 
