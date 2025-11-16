@@ -239,7 +239,8 @@ async function getOrAskForMainBranch(root: string): Promise<string | null> {
 
 async function saveMainBranch(value: string): Promise<void> {
   const config = vscode.workspace.getConfiguration('copilotGitReview');
-  await config.update('mainBranch', value, vscode.ConfigurationTarget.Global);
+  // Store at workspace level so each workspace can have its own main/base branch
+  await config.update('mainBranch', value, vscode.ConfigurationTarget.Workspace);
 }
 
 function getGitDiff(root: string, current: string, main: string): Promise<string | null> {

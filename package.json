@@ -2,7 +2,7 @@
   "name": "copilot-git-review",
   "displayName": "Copilot Git Review",
   "description": "Review your code changes with Copilot in one click.",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "publisher": "harrus",
   "repository": "https://github.com/hoangnguyenduc3009/copilot-git-review",
   "readme": "DETAILS.md",
@@ -27,12 +27,12 @@
     "commands": [
       {
         "command": "mcp.getGitDiff",
-        "title": "MCP: Send Git Diff to Copilot Chat",
+        "title": "Copilot Git Review: Send Git Diff to Copilot Chat",
         "icon": "$(git-branch)"
       },
       {
         "command": "mcp.selectMainBranch",
-        "title": "MCP: Select Main Branch",
+        "title": "Copilot Git Review: Select Main Branch",
         "icon": "$(repo-pull)"
       }
     ],
@@ -57,6 +57,10 @@
         {
           "command": "mcp.getGitDiff",
           "group": "navigation"
+        },
+        {
+          "command": "mcp.selectMainBranch",
+          "group": "navigation"
         }
       ],
       "view/title": [
@@ -64,6 +68,11 @@
           "command": "mcp.getGitDiff",
           "when": "view == workbench.view.scm",
           "group": "navigation"
+        },
+        {
+          "command": "mcp.selectMainBranch",
+          "when": "view == workbench.view.scm",
+          "group": "navigation@1"
         }
       ]
     },
@@ -74,7 +83,7 @@
           "type": "string",
           "default": "",
           "markdownDescription": "Main/base branch to diff against (e.g., 'main', 'master', or 'origin/main'). Leave empty to be prompted the first time.",
-          "scope": "application"
+          "scope": "window"
         }
       }
     }
