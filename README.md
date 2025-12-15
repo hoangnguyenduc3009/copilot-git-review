@@ -28,8 +28,8 @@ A VS Code extension that helps developers quickly send their git diff to Copilot
 
 | Command | Shortcut | Description |
 |---------|----------|-------------|
-| `MCP: Send Git Diff to Copilot Chat` | `Cmd+Shift+D` (macOS)<br>`Ctrl+Alt+D` (Windows/Linux) | Send your current diff to Copilot Chat |
-| `MCP: Select Main Branch` | — | Choose the main branch to diff against |
+| `Copilot Git Review: Send Git Diff to Copilot Chat` | `Cmd+Shift+D` (macOS)<br>`Ctrl+Alt+D` (Windows/Linux) | Send your current diff to Copilot Chat |
+| `Copilot Git Review: Select Main Branch` | — | Choose the main branch to diff against |
 
 ## Configuration
 

@@ -13,15 +13,15 @@ This document provides detailed information about the Copilot Git Review VS Code
 
 ## How it works
 
-1. The user triggers the command `MCP: Send Git Diff to Copilot Chat` (via Command Palette, context menu, or keybinding).
+1. The user triggers the command `Copilot Git Review: Send Git Diff to Copilot Chat` (via Command Palette, context menu, or keybinding).
 2. The extension collects the git diff relative to the configured main branch (`copilotGitReview.mainBranch`).
 3. The diff is packaged and sent to Copilot Chat using the editor's Copilot Chat integration.
 4. The review or suggestions appear in Copilot Chat and the user can interact with them.
 
 ## Commands
 
-- `MCP: Send Git Diff to Copilot Chat` — Collect the git diff and send it to Copilot Chat.
-- `MCP: Select Main Branch` — Choose the main branch to diff against (e.g., `main`, `master`, or `origin/main`).
+- `Copilot Git Review: Send Git Diff to Copilot Chat` — Collect the git diff and send it to Copilot Chat.
+- `Copilot Git Review: Select Main Branch` — Choose the main branch to diff against (e.g., `main`, `master`, or `origin/main`).
 
 ## Configuration
 
@@ -40,7 +40,7 @@ This document provides detailed information about the Copilot Git Review VS Code
 ## Example usage
 
 1. Open a VS Code workspace containing a git repository with local changes.
-2. Press `Cmd+Shift+D` (macOS) or run `MCP: Send Git Diff to Copilot Chat` from the Command Palette.
+2. Press `Cmd+Shift+D` (macOS) or run `Copilot Git Review: Send Git Diff to Copilot Chat` from the Command Palette.
 3. Open Copilot Chat to view suggestions and feedback.
 
 ## Troubleshooting

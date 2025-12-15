@@ -1,6 +1,28 @@
 import * as vscode from 'vscode';
 import * as cp from 'child_process';
 
+// Exclude log files, lock files, and other unnecessary files from diffs
+const excludePatterns = [
+  '*.log',
+  '*.lock',
+  'package-lock.json',
+  'yarn.lock',
+  'pnpm-lock.yaml',
+  'bun.lockb',
+  '*.min.js',
+  '*.min.css',
+  '*.map',
+  'dist/*',
+  'build/*',
+  'out/*',
+  '.vscode/*',
+  '.idea/*',
+  'node_modules/*',
+  '*.tmp',
+  '*.temp',
+  '*.cache'
+];
+
 export function activate(context: vscode.ExtensionContext) {
   const disposable = vscode.commands.registerCommand('mcp.getGitDiff', async () => {
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
@@ -25,10 +47,30 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
   // 3. Get diff
-      const diff = await getGitDiff(workspaceRoot, currentBranch, mainBranch);
+      let diff = await getGitDiff(workspaceRoot, currentBranch, mainBranch);
       if (!diff) {
-        vscode.window.showInformationMessage('No changes to diff.');
-        return;
+        // Check if there are uncommitted changes
+        const hasUncommitted = await checkUncommittedChanges(workspaceRoot);
+        
+        if (hasUncommitted) {
+          const choice = await vscode.window.showInformationMessage(
+            'No diff between branches, but you have uncommitted changes. Would you like to review them?',
+            'Review Uncommitted Changes', 'Cancel'
+          );
+          
+          if (choice === 'Review Uncommitted Changes') {
+            diff = await getUncommittedChangesDiff(workspaceRoot);
+            if (!diff) {
+              vscode.window.showWarningMessage('Could not get uncommitted changes diff.');
+              return;
+            }
+          } else {
+            return;
+          }
+        } else {
+          vscode.window.showInformationMessage('No changes to diff.1');
+          return;
+        }
       }
 
   // 4. Ask the user to enter ticket/requirement (optional)
@@ -243,30 +285,29 @@ async function saveMainBranch(value: string): Promise<void> {
   await config.update('mainBranch', value, vscode.ConfigurationTarget.Workspace);
 }
 
+function checkUncommittedChanges(root: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    cp.exec('git status --porcelain', { cwd: root }, (err, stdout) => {
+      if (err || !stdout.trim()) resolve(false);
+      else resolve(true);
+    });
+  });
+}
+
+function getUncommittedChangesDiff(root: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const excludeArgs = excludePatterns.map(p => `':(exclude)${p}'`).join(' ');
+    // Get both staged and unstaged changes
+    const cmd = `git diff HEAD --unified=3 -- . ${excludeArgs}`;
+    cp.exec(cmd, { cwd: root, maxBuffer: 10 * 1024 * 1024 }, (err, stdout) => {
+      if (err || !stdout.trim()) resolve(null);
+      else resolve(stdout);
+    });
+  });
+}
+
 function getGitDiff(root: string, current: string, main: string): Promise<string | null> {
   return new Promise((resolve) => {
-    // Exclude log files, lock files, and other unnecessary files
-    const excludePatterns = [
-      '*.log',
-      '*.lock',
-      'package-lock.json',
-      'yarn.lock',
-      'pnpm-lock.yaml',
-      'bun.lockb',
-      '*.min.js',
-      '*.min.css',
-      '*.map',
-      'dist/*',
-      'build/*',
-      'out/*',
-      '.vscode/*',
-      '.idea/*',
-      'node_modules/*',
-      '*.tmp',
-      '*.temp',
-      '*.cache'
-    ];
-    
     const excludeArgs = excludePatterns.map(p => `':(exclude)${p}'`).join(' ');
     const cmd = `git diff ${main}...${current} --unified=3 -- . ${excludeArgs}`;
     cp.exec(cmd, { cwd: root, maxBuffer: 10 * 1024 * 1024 }, (err, stdout) => {
